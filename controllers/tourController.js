@@ -37,7 +37,7 @@ exports.createTour = (req, res) => {
   const newTour = { ...req.body, id };
   tours.push(newTour);
 
-  fs.writeFile(tourPath, JSON.stringify(tours), (err) => {
+  fs.writeFile(tourPath, JSON.stringify(tours), () => {
     res.status(201).json({
       status: 'success',
       data: {
@@ -47,14 +47,13 @@ exports.createTour = (req, res) => {
   });
 };
 
-exports.getTourById = (req, res) => {
-  return res.json({
+exports.getTourById = (req, res) =>
+  res.json({
     status: 'success',
     data: {
       tour: req.foundTour,
     },
   });
-};
 
 exports.updateTour = (req, res) => {
   res.json({
@@ -71,4 +70,3 @@ exports.deleteTour = (req, res) => {
     data: null,
   });
 };
-
