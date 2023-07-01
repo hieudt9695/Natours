@@ -7,8 +7,12 @@ router.param('id', userController.checkUserId);
 
 router
   .route('/')
-  .get(userController.getAllUsers)
+  .get(userController.auth, userController.getAllUsers)
   .post(userController.createUser);
+
+router.get('/stats', userController.getUserStatistic);
+router.post('/signup', userController.createUser);
+router.post('/login', userController.login);
 
 router
   .route('/:id')

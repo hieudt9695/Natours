@@ -7,9 +7,17 @@ const router = express.Router();
 router.param('id', tourController.checkTourID);
 
 router
+  .route('/top')
+  .get(tourController.getTopTours, tourController.getAllTours);
+
+router
   .route('/')
   .get(tourController.getAllTours)
-  .post(tourController.createTour);
+  .post(tourController.createTour)
+  .delete(tourController.deleteAllTours);
+
+router.route('/stats').get(tourController.getTourStats);
+router.route('/monthly-plan/:year').get(tourController.getTourMonthlyPlan);
 
 router
   .route('/:id')
