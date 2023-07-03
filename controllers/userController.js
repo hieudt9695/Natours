@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { promisify } = require('util');
 const User = require('../models/user');
 const APIFeature = require('../utils/api-features');
 const AppError = require('../utils/app-error');
@@ -110,13 +111,13 @@ exports.login = catchAsync(async (req, res) => {
   }
 
   const loginUser = await User.findOne({ email }).select('+password');
-  const isPasswordCorrect = await loginUser.correctPassword(
-    password,
-    loginUser.password
-  );
+
+  const isPasswordCorrect = loginUser
+    ? await loginUser.correctPassword(password, loginUser.password)
+    : false;
 
   if (!loginUser || !isPasswordCorrect) {
-    throw new AppError('Email or password is incorrect.', 404);
+    throw new AppError('Email or password is incorrect.', 401);
   }
 
   const token = jwt.sign({ id: loginUser.id }, process.env.JWT_SECRET, {
@@ -132,5 +133,31 @@ exports.login = catchAsync(async (req, res) => {
 });
 
 exports.auth = catchAsync(async (req, res, next) => {
+  const { authorization } = req.headers;
+  let token = '';
+  if (authorization && authorization.startsWith('Bearer')) {
+    token = authorization.split(' ')[1];
+  }
+
+  if (!token) {
+    throw new AppError('you are not authen.', 401);
+  }
+
+  const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+
+  const loginUser = await User.findById(decoded.id);
+
+  if (!loginUser) {
+    throw new AppError('you are not authen.', 401);
+  }
+
+  req.user = loginUser;
   next();
 });
+
+exports.restrictTo = (...roles) =>
+  catchAsync(async (req, res, next) => {
+    console.log(roles);
+    if (roles.includes(req.user.role)) return next();
+    throw new AppError('You are not allowed!', 401);
+  });

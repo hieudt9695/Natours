@@ -1,5 +1,6 @@
 const express = require('express');
 const tourController = require('../controllers/tourController');
+const userController = require('../controllers/userController');
 
 const router = express.Router();
 
@@ -23,6 +24,10 @@ router
   .route('/:id')
   .get(tourController.getTourById)
   .patch(tourController.updateTour)
-  .delete(tourController.deleteTour);
+  .delete(
+    userController.auth,
+    userController.restrictTo('admin'),
+    tourController.deleteTour
+  );
 
 module.exports = router;
