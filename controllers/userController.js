@@ -1,9 +1,11 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { promisify } = require('util');
 const User = require('../models/user');
 const APIFeature = require('../utils/api-features');
 const AppError = require('../utils/app-error');
 const catchAsync = require('../utils/catchAsync');
+const { sendEmail } = require('../utils/email');
 
 const queryKeys = ['name'];
 
@@ -157,7 +159,102 @@ exports.auth = catchAsync(async (req, res, next) => {
 
 exports.restrictTo = (...roles) =>
   catchAsync(async (req, res, next) => {
-    console.log(roles);
     if (roles.includes(req.user.role)) return next();
     throw new AppError('You are not allowed!', 401);
   });
+
+exports.forgotPassword = catchAsync(async (req, res, next) => {
+  const user = await User.findOne({ email: req.body.email });
+  if (!user) {
+    throw new AppError('User not found!', 404);
+  }
+
+  // create reset token
+  const resetToken = user.createPasswordResetToken();
+
+  const requestUrl = `${req.protocol}://${req.get(
+    'host'
+  )}/api/v1/users/reset-password/${resetToken}`;
+  const message = `Click here to reset password ${requestUrl}`;
+
+  try {
+    await sendEmail({
+      email: 'dangtrunghieu147@gmail.com',
+      subject: 'Reset passsword',
+      message,
+    });
+  } catch (err) {
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+    throw new AppError('Send mail fail', 500);
+  }
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Token send to email',
+  });
+
+  await user.save({ validateBeforeSave: false });
+});
+
+exports.resetPassword = catchAsync(async (req, res, next) => {
+  const { token: resetToken } = req.params;
+  const hashedToken = crypto
+    .createHash('sha256')
+    .update(resetToken)
+    .digest('hex');
+  const user = await User.findOne({ passwordResetToken: hashedToken });
+
+  if (!user) {
+    throw new AppError('User not found!', 404);
+  }
+
+  if (user.passwordResetExpires < Date.now()) {
+    throw new AppError('Token expired', 401);
+  }
+
+  if (req.body.password !== req.body.passwordConfirm) {
+    throw new AppError('Password is not match', 401);
+  }
+  //update user password
+  user.password = req.body.password;
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
+
+  await user.save();
+  // sign new JWT
+  const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN,
+  });
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      token,
+    },
+  });
+});
+
+exports.updatePassword = catchAsync(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const user = await User.findById(req.user.id).select('+password');
+  if (!user || !(await user.correctPassword(currentPassword, user.password))) {
+    throw new AppError('password is incorrect.', 401);
+  }
+
+  user.password = newPassword;
+  await user.save();
+
+  // sign new JWT
+  const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN,
+  });
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      token,
+    },
+  });
+});

@@ -14,6 +14,14 @@ router.get('/stats', userController.getUserStatistic);
 router.post('/signup', userController.createUser);
 router.post('/login', userController.login);
 
+router.post('/forgot-password', userController.forgotPassword);
+router.patch('/reset-password/:token', userController.resetPassword);
+router.patch(
+  '/update-password',
+  userController.auth,
+  userController.updatePassword
+);
+
 router
   .route('/:id')
   .get(userController.getOneUser)
