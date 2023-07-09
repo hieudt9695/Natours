@@ -258,3 +258,5 @@ exports.updatePassword = catchAsync(async (req, res) => {
     },
   });
 });
+
+exports.updateProfile = catchAsync(async (req, res) => {});

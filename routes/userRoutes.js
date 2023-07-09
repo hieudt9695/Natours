@@ -21,7 +21,11 @@ router.patch(
   userController.auth,
   userController.updatePassword
 );
-
+router.patch(
+  '/update-profile',
+  userController.auth,
+  userController.updateProfile
+);
 router
   .route('/:id')
   .get(userController.getOneUser)
