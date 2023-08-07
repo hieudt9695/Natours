@@ -7,7 +7,7 @@ router.param('id', userController.checkUserId);
 
 router
   .route('/')
-  .get(userController.auth, userController.getAllUsers)
+  .get(userController.getAllUsers)
   .post(userController.createUser);
 
 router.get('/stats', userController.getUserStatistic);

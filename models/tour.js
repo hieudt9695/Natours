@@ -54,6 +54,34 @@ const tourSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    startLocation: {
+      // GEO Json
+      type: {
+        type: String,
+        default: 'Point',
+        enum: ['Point'],
+      },
+      coordinates: [Number],
+      address: String,
+    },
+    locations: [
+      {
+        // GEO Json
+        type: {
+          type: String,
+          default: 'Point',
+          enum: ['Point'],
+        },
+        coordinates: [Number],
+        address: String,
+      },
+    ],
+    guides: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
   },
   {
     timestamps: true,
@@ -78,6 +106,11 @@ tourSchema.pre(/^find/, function (next) {
   next();
 });
 
+tourSchema.pre(/^find/, function (next) {
+  this.populate('guides', 'name email');
+  next();
+});
+
 tourSchema.post(/^find/, function (doc, next) {
   console.log(`query took ${Date.now() - this.start} miliseconds`);
 
@@ -92,6 +125,13 @@ tourSchema.pre('aggregate', function (next) {
 
 tourSchema.virtual('durationWeek').get(function () {
   return this.duration / 7;
+});
+
+// virtual populate
+tourSchema.virtual('reviews', {
+  ref: 'Review',
+  foreignField: 'tourID',
+  localField: '_id',
 });
 
 const Tour = mongoose.model('Tour', tourSchema);

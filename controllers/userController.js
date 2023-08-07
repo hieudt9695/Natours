@@ -14,9 +14,7 @@ exports.getAllUsers = catchAsync(async (req, res) => {
     .filter()
     .sort()
     .paginate()
-
     .exec();
-
   const users = await query;
   res.status(200).json({
     status: 'success',
@@ -126,20 +124,21 @@ exports.login = catchAsync(async (req, res) => {
     expiresIn: process.env.JWT_EXPIRES_IN,
   });
 
+  const cookieOptions = {
+    expires: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+    secure: false,
+    httpOnly: true,
+  };
+
+  res.cookie('token', token, cookieOptions);
+
   res.json({
     status: 'success',
-    data: {
-      token,
-    },
   });
 });
 
 exports.auth = catchAsync(async (req, res, next) => {
-  const { authorization } = req.headers;
-  let token = '';
-  if (authorization && authorization.startsWith('Bearer')) {
-    token = authorization.split(' ')[1];
-  }
+  const { token } = req.cookies;
 
   if (!token) {
     throw new AppError('you are not authen.', 401);
